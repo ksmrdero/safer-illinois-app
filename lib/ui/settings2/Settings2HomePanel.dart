@@ -21,23 +21,23 @@ import 'package:flutter/material.dart';
 import 'package:illinois/service/Analytics.dart';
 import 'package:illinois/service/AppNavigation.dart';
 import 'package:illinois/service/Auth.dart';
-import 'package:illinois/service/Config.dart';
 import 'package:illinois/service/Connectivity.dart';
 import 'package:illinois/service/Exposure.dart';
 import 'package:illinois/service/Health.dart';
 import 'package:illinois/service/Localization.dart';
 import 'package:illinois/service/Log.dart';
 import 'package:illinois/service/NotificationService.dart';
+import 'package:illinois/service/Organizations.dart';
 import 'package:illinois/service/Styles.dart';
-import 'package:illinois/service/User.dart';
-import 'package:illinois/ui/health/Covid19HistoryPanel.dart';
-import 'package:illinois/ui/health/Covid19TransferEncryptionKeyPanel.dart';
-import 'package:illinois/ui/health/onboarding/Covid19OnBoardingResidentInfoPanel.dart';
+import 'package:illinois/service/UserProfile.dart';
+import 'package:illinois/ui/health/HealthHistoryPanel.dart';
+import 'package:illinois/ui/settings2/Settings2TransferEncryptionKeyPanel.dart';
+import 'package:illinois/ui/onboarding/OnboardingResidentInfoPanel.dart';
 import 'package:illinois/ui/onboarding/OnboardingLoginPhoneVerifyPanel.dart';
 import 'package:illinois/ui/settings2/Settings2ConsentPanel.dart';
 import 'package:illinois/ui/settings2/Settings2GovernmentIdPanel.dart';
 import 'package:illinois/ui/settings2/Settings2ExposureNotificationsPanel.dart';
-import 'package:illinois/ui/settings/debug/SettingsDebugPanel.dart';
+import 'package:illinois/ui/settings/debug/SettingsDebugHomePanel.dart';
 import 'package:illinois/ui/widgets/HeaderBar.dart';
 import 'package:illinois/ui/widgets/RibbonButton.dart';
 import 'package:illinois/ui/widgets/RoundedButton.dart';
@@ -61,7 +61,7 @@ class _Settings2HomePanelState extends State<Settings2HomePanel> implements Noti
 
     NotificationService().subscribe(this, [
       Auth.notifyUserPiiDataChanged,
-      User.notifyUserUpdated,
+      UserProfile.notifyProfileUpdated,
       Health.notifyUserUpdated,
     ]);
 
@@ -86,7 +86,7 @@ class _Settings2HomePanelState extends State<Settings2HomePanel> implements Noti
     await Health().deleteUser();
     await Exposure().deleteUser();
     await Auth().deleteUserPiiData();
-    await User().deleteUser();
+    await UserProfile().deleteProfile();
     Auth().logout();
   }
 
@@ -94,7 +94,7 @@ class _Settings2HomePanelState extends State<Settings2HomePanel> implements Noti
     setState(() {
       _isLoading = true;
     });
-    Health().loadUser().whenComplete((){
+    Health().refreshUser().whenComplete((){
       setState(() {
         _isLoading = false;
       });
@@ -107,7 +107,7 @@ class _Settings2HomePanelState extends State<Settings2HomePanel> implements Noti
   void onNotification(String name, dynamic param) {
     if (name == Auth.notifyUserPiiDataChanged) {
       _updateState();
-    } else if (name == User.notifyUserUpdated){
+    } else if (name == UserProfile.notifyProfileUpdated){
       _updateState();
     } else if (name == Health.notifyUserUpdated){
       _updateState();
@@ -189,14 +189,14 @@ class _Settings2HomePanelState extends State<Settings2HomePanel> implements Noti
                     height: null,
                     borderRadius: BorderRadius.all(Radius.circular(4)),
                     label: 'Exposure Notifications',
-                    value: (Health()?.healthUser?.exposureNotification ?? false) ? 'Enabled' : 'Disabled',
+                    value: (Health().user?.exposureNotification ?? false) ? 'Enabled' : 'Disabled',
                     descriptionLabel: 'Learn more information about exposure notifications and manage your settings.',
                     onTap: _onExposureNotificationsTapped,
                   ),
                   Container(height: 12,),
                   CustomRibbonButton(
                     height: null,
-                    value: (Health()?.healthUser?.consent ?? false) ? 'Enabled' : 'Disabled',
+                    value: (Health().user?.consent ?? false) ? 'Enabled' : 'Disabled',
                     borderRadius: BorderRadius.all(Radius.circular(4)),
                     label: 'Automatic Test Results',
                     descriptionLabel: 'Learn more information about automatic test results and manage your settings.',
@@ -552,7 +552,7 @@ class _Settings2HomePanelState extends State<Settings2HomePanel> implements Noti
     }
     else {
       Navigator.push(context, CupertinoPageRoute(
-          builder: (context) => Covid19OnBoardingResidentInfoPanel(
+          builder: (context) => OnboardingResidentInfoPanel(
             onSucceed: (Map<String,dynamic> data){
               Navigator.pushReplacement(context, CupertinoPageRoute(builder: (context) => Settings2GovernmentIdPanel(initialData: data,)));
             },
@@ -596,12 +596,12 @@ class _Settings2HomePanelState extends State<Settings2HomePanel> implements Noti
 
   void _onEventHistoryTapped(){
     Analytics.instance.logSelect(target: "COVID-19 Test History");
-    Navigator.push(context, CupertinoPageRoute(builder: (context) => Covid19HistoryPanel()));
+    Navigator.push(context, CupertinoPageRoute(builder: (context) => HealthHistoryPanel()));
   }
 
   void _onTransferKeyTapped() {
     Analytics.instance.logSelect(target: "Transfer Your COVID-19 Encryption Key");
-    Navigator.push(context, CupertinoPageRoute(builder: (context) => Covid19TransferEncryptionKeyPanel()));
+    Navigator.push(context, CupertinoPageRoute(builder: (context) => Settings2TransferEncryptionKeyPanel()));
   }
 
   void _onExposureNotificationsTapped(){
@@ -763,7 +763,7 @@ class _DebugContainerState extends State<_DebugContainer> {
   }
 
   void _showPinDialog(){
-    TextEditingController pinController = TextEditingController(text: (!kReleaseMode || Config().isDev) ? this.pinOfTheDay : '');
+    TextEditingController pinController = TextEditingController(text: (!kReleaseMode || Organizations().isDevEnvironment) ? this.pinOfTheDay : '');
     showDialog(context: context, barrierDismissible: false, builder: (context) =>  Dialog(
       child:  Padding(
         padding: EdgeInsets.all(18),
@@ -820,7 +820,7 @@ class _DebugContainerState extends State<_DebugContainer> {
   void _onEnterPin(String pin){
     if (this.pinOfTheDay == pin) {
       Navigator.pop(context);
-      Navigator.push(context, CupertinoPageRoute(builder: (context) => SettingsDebugPanel()));
+      Navigator.push(context, CupertinoPageRoute(builder: (context) => SettingsDebugHomePanel()));
     } else {
       AppToast.show("Invalid pin");
     }

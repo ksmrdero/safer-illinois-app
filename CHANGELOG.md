@@ -6,7 +6,158 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [2.10.3] - 2020-01-04
+### Fixed
+- Pass the right user UIN when creating debug events. [#441](https://github.com/rokwire/safer-illinois-app/issues/441).
+- Fixed user details in Status panel when subaccount is selected. [#442](https://github.com/rokwire/safer-illinois-app/issues/442).
+
+## [2.10.2] - 2020-01-03
+### Added
+- Added user subaccounts feature [#437](https://github.com/rokwire/safer-illinois-app/issues/437).
+
+## [2.10.1] - 2020-12-01
+### Changed
+- Update user PII data from authentication/roster data [#432](https://github.com/rokwire/safer-illinois-app/issues/432).
+- Added login widget in Home panel when user is not connected [#434](https://github.com/rokwire/safer-illinois-app/issues/434).
+
+## [2.10.0] - 2020-11-30
+### Fixed
+- Fix FirebaseCrashlytics [#428](https://github.com/rokwire/safer-illinois-app/issues/428).
+- CareTeamPanel fix semantics pronauncement for Mental Health button [#422](https://github.com/rokwire/safer-illinois-app/issues/422)
+
+### Deleted
+- Removed unused images from application project [#419](https://github.com/rokwire/safer-illinois-app/issues/419).
+
+### Changed
+- Health service reworked to permanantly cache all data necessary for status build.
+- Use better naming in internal classes.
+
+## [2.9.4] - 2020-11-18
+### Fixed
+- Error message cannot be read if keyboard is up - please hide the keyboard after a send - see error_message_hidden.png [#414](https://github.com/rokwire/safer-illinois-app/issues/414).
+- Change everywhere we have "Capitol Staff" to "Non University Member" - on boarding roles, messages etc [#412](https://github.com/rokwire/safer-illinois-app/issues/412).
+- Updated Updated capitol staff persona icons.
+- Make sure to display localized symptom name everywhere [#411](https://github.com/rokwire/safer-illinois-app/issues/411).
+
+## [2.9.3] - 2020-11-17
+### Added
+- Implemented permanent muted audio playback in native iOS Exposure service [#407](https://github.com/rokwire/safer-illinois-app/issues/407).
+
+## [2.9.2] - 2020-11-16
+### Changed
+- Show full name for Capitol Staff in the status card [#401](https://github.com/rokwire/safer-illinois-app/issues/401).
+
+### Fixed
+- iOS Crash while trying to retrieve device uuid from native part [#397](https://github.com/rokwire/safer-illinois-app/issues/397).
+- Crashes with FCM notifications in Android [#394](https://github.com/rokwire/safer-illinois-app/issues/394).
+- Do not show the wait time if the location is closed [#398](https://github.com/rokwire/safer-illinois-app/issues/398).
+
+## [2.9.1] - 2020-11-12
+### Changed
+- Safer onboarding changes 11/12 [#390](https://github.com/rokwire/safer-illinois-app/issues/390).
+
+## [2.9.0] - 2020-11-10
+### Added
+- A pull request template. [#324](https://github.com/rokwire/safer-illinois-app/issues/324)
+- Contributor guidelines (CONTRIBUTING.md). [#322](https://github.com/rokwire/safer-illinois-app/issues/322).
+
+## [2.8.13] - 2020-11-09
+### Fixed
+- Cannot confirm one time code [#379](https://github.com/rokwire/safer-illinois-app/issues/379).
+- Added symptoms translations [#337](https://github.com/rokwire/safer-illinois-app/issues/337).
+
+## [2.8.12] - 2020-11-06
+### Fixed
+- CareTeamPanel fix non student aditional message. [#269](https://github.com/rokwire/safer-illinois-app/issues/269).
+- Build error related to ios app [#374](https://github.com/rokwire/safer-illinois-app/issues/374).
+- Fixed the error related to app framework minimum os version [#375](https://github.com/rokwire/safer-illinois-app/issues/375).
+
+## [2.8.11] - 2020-11-05
+### Added
+- Pass application id as header field in FCM API calls from sports service [#364](https://github.com/rokwire/safer-illinois-app/issues/364).
+
+### Fixed
+- Fixed various string entry translations [#364](https://github.com/rokwire/safer-illinois-app/issues/364).
+- Fixed Initial loading screen [#366](https://github.com/rokwire/safer-illinois-app/issues/366).
+- CareTeamPanel: update link urls [#269](https://github.com/rokwire/safer-illinois-app/issues/269).
+- User is not able to Sign out successfully by tapping the Sign-out button on Personal Info screen [#303](https://github.com/rokwire/safer-illinois-app/issues/303).
+
+## [2.8.10] - 2020-11-04
+### Added
+- Added ability to enable/disable capitol stuff from app config settings [#353](https://github.com/rokwire/safer-illinois-app/issues/353).
+- Check if Capitol staff user has a roster UIN on app resume [#355](https://github.com/rokwire/safer-illinois-app/issues/355).
+
+### Changed
+- Acknowledge exposure log url from app config.
+- Various strings updated [#357](https://github.com/rokwire/safer-illinois-app/issues/357), [#359](https://github.com/rokwire/safer-illinois-app/issues/359).
+
+### Fixed
+- Unable to save qr code during the onboarding process after fresh install [#361](https://github.com/rokwire/safer-illinois-app/issues/361).
+
+## [2.8.9] - 2020-11-03
+### Added
+- Send additional exposure stats with processed test result analytics event [#332](https://github.com/rokwire/safer-illinois-app/issues/332).
+- Implemented exclusive selection by group in role selection panels [#347](https://github.com/rokwire/safer-illinois-app/issues/347).
+- More precise adjusting phone numbers with "+1" prefix [#350](https://github.com/rokwire/safer-illinois-app/issues/350).
+
+## [2.8.8] - 2020-11-02
+### Fixed
+- Do not ignore unknown user roles [#343](https://github.com/rokwire/safer-illinois-app/issues/343).
+
+## [2.8.7] - 2020-10-30
+### Added
+- Capitol Staff [#342](https://github.com/rokwire/safer-illinois-app/issues/342).
+- Added FCM topics subscription support from health status [#339](https://github.com/rokwire/safer-illinois-app/issues/339).
+
+## [2.8.6] - 2020-10-28
+### Changed
+- Prepare app for flexable health status codes, health status strings cleanup.
+
+## [2.8.5] - 2020-10-27
+### Fixed
+- Home panel is not refreshing after successful login and/or private key entrance [#333](https://github.com/rokwire/safer-illinois-app/issues/333).
+
+## [2.8.4] - 2020-10-23
+### Added
+- Added ability to refer local strings from rules and action texts.
+
+### Fixed
+- Fixed "force-test" rule behavior, step texts updated either.
+
+## [2.8.3] - 2020-10-22
+### Added
+- Enable again Talent Chooser for Safer app [#306](https://github.com/rokwire/safer-illinois-app/issues/306).
+- Multilanguage support in Health rules and action events [#308](https://github.com/rokwire/safer-illinois-app/issues/308).
+
+### Fixed
+- Fixed miscellaneous strings translation, display dates localized [#308](https://github.com/rokwire/safer-illinois-app/issues/308).
+
+## [2.8.2] - 2020-10-21
+### Added
+- Added "force-test" rule status and action. [#319](https://github.com/rokwire/safer-illinois-app/issues/319).
+- Added "referenceDate" origin when evaluating status. [#319](https://github.com/rokwire/safer-illinois-app/issues/319).
+
+### Changed
+- Apply rule status priority on status downgrade. [#319](https://github.com/rokwire/safer-illinois-app/issues/319).
+
+### Fixed
+- Unable to log in with iOS Default Browser changed [#315](https://github.com/rokwire/safer-illinois-app/issues/315).
+
+## [2.8.1] - 2020-10-20
+### Added
+- Added ability to turn off multiple organizations support and build single organization app.
+- Added backward support for single organization app upgrade.
+- Log "exposure_score" in "check_exposures" analytics event [#309](https://github.com/rokwire/safer-illinois-app/issues/309).
+
+### Changed
+- Multiple organizations support - cleanup.
+
+## [2.8.0] - 2020-10-19
+### Added
+- Multiple organizations support - first round.
+
 ## [2.7.9] - 2020-10-16
+### Changed
 - Covid19TestLocations panel: update unavailable waith time text [#279](https://github.com/rokwire/safer-illinois-app/issues/279)
 
 ## [2.7.8] - 2020-10-15

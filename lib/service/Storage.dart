@@ -18,7 +18,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:illinois/model/Auth.dart';
 import 'package:illinois/model/Health.dart';
-import 'package:illinois/model/UserData.dart';
+import 'package:illinois/model/Organization.dart';
+import 'package:illinois/model/UserProfile.dart';
 import 'package:illinois/service/NativeCommunicator.dart';
 import 'package:illinois/service/NotificationService.dart';
 import 'package:illinois/service/Service.dart';
@@ -138,27 +139,27 @@ class Storage with Service {
   /////////////
   // User
 
-  static const String userKey  = 'user';
+  static const String userProfileKey  = 'user';
 
-  UserData get userData {
-    final String userToString = _getStringWithName(userKey);
+  UserProfileData get userProfile {
+    final String userToString = _getStringWithName(userProfileKey);
     final Map<String, dynamic> userToJson = AppJson.decode(userToString);
-    return (userToJson != null) ? UserData.fromJson(userToJson) : null;
+    return (userToJson != null) ? UserProfileData.fromJson(userToJson) : null;
   }
 
-  set userData(UserData user) {
+  set userProfile(UserProfileData user) {
     String userToString = (user != null) ? json.encode(user) : null;
-    _setStringWithName(userKey, userToString);
+    _setStringWithName(userProfileKey, userToString);
   }
 
-  static const String localUserUuidKey  = 'user_local_uuid';
+  static const String localProfileUuidKey  = 'user_local_uuid';
 
-  String get localUserUuid {
-    return _getStringWithName(localUserUuidKey);
+  String get localProfileUuid {
+    return _getStringWithName(localProfileUuidKey);
   }
 
-  set localUserUuid(String value) {
-    _setStringWithName(localUserUuidKey, value);
+  set localProfileUuid(String value) {
+    _setStringWithName(localProfileUuidKey, value);
   }
 
   /////////////
@@ -246,16 +247,16 @@ class Storage with Service {
     _setStringWithName(authTokenKey, value != null ? json.encode(value.toJson()) : null);
   }
 
-  static const String authInfoKey  = '_auth_info';
+  static const String authUserKey  = '_auth_info';
 
-  AuthInfo get authInfo {
-    final String authInfoToString = _getStringWithName(authInfoKey);
-    AuthInfo authInfo = AuthInfo.fromJson(AppJson.decode(authInfoToString));
-    return authInfo;
+  AuthUser get authUser {
+    final String authUserToString = _getStringWithName(authUserKey);
+    AuthUser authUser = AuthUser.fromJson(AppJson.decode(authUserToString));
+    return authUser;
   }
 
-  set authInfo(AuthInfo value) {
-    _setStringWithName(authInfoKey, value != null ? json.encode(value.toJson()) : null);
+  set authUser(AuthUser value) {
+    _setStringWithName(authUserKey, value != null ? json.encode(value.toJson()) : null);
   }
 
   static const String authCardTimeKey  = '_auth_card_time';
@@ -266,6 +267,36 @@ class Storage with Service {
 
   set authCardTime(int value) {
     _setIntWithName(authCardTimeKey, value);
+  }
+
+  static const String rokmetroTokenKey  = '_rokmetro_token';
+
+  RokmetroToken get rokmetroToken {
+    try {
+      String jsonString = _getStringWithName(rokmetroTokenKey);
+      Map<String, dynamic> jsonData = AppJson.decodeMap(jsonString);
+      return (jsonData != null) ? RokmetroToken.fromJson(jsonData) : null;
+    } on Exception catch (e) { print(e.toString()); }
+    return null;
+  }
+
+  set rokmetroToken(RokmetroToken value) {
+    _setStringWithName(rokmetroTokenKey, AppJson.encode(value?.toJson()));
+  }
+
+  static const String rokmetroUserKey  = '_rokmetro_user';
+
+  RokmetroUser get rokmetroUser {
+    try {
+      String jsonString = _getStringWithName(rokmetroUserKey);
+      Map<String, dynamic> jsonData = AppJson.decodeMap(jsonString);
+      return (jsonData != null) ? RokmetroUser.fromJson(jsonData) : null;
+    } on Exception catch (e) { print(e.toString()); }
+    return null;
+  }
+
+  set rokmetroUser(RokmetroUser value) {
+    _setStringWithName(rokmetroUserKey, AppJson.encode(value?.toJson()));
   }
 
   /////////////////
@@ -311,6 +342,19 @@ class Storage with Service {
   }
 
   /////////////
+  // Organizaton
+
+  static const String _organiationKey = 'organization';
+
+  Organization get organization {
+    return Organization.fromJson(AppJson.decode(_getEncryptedStringWithName(_organiationKey)));
+  }
+
+  set organization(Organization organization) {
+    _setEncryptedStringWithName(_organiationKey, AppJson.encode(organization?.toJson()));
+  }
+
+  /////////////
   // Config
 
   static const String _configEnvKey = 'config_environment';
@@ -326,6 +370,7 @@ class Storage with Service {
   /////////////
   // Health
 
+  // Obsolete
   static const String _currentHealthCountyIdKey = 'health_current_county_id';
   
   String get currentHealthCountyId {
@@ -347,50 +392,89 @@ class Storage with Service {
     _sharedPreferences.setString(_lastHealthProviderKey, value!=null? json.encode(value.toJson()) :value);
   }
 
-  static const String lastHealthCovid19StatusKey = 'health_last_covid19_status';
+  static const String _lastHealthCovid19StatusKey = 'health_last_covid19_status';
 
   String get lastHealthCovid19Status {
-    return _getStringWithName(lastHealthCovid19StatusKey);
+    return _getStringWithName(_lastHealthCovid19StatusKey);
   }
 
   set lastHealthCovid19Status(String value) {
-    _setStringWithName(lastHealthCovid19StatusKey, value);
+    _setStringWithName(_lastHealthCovid19StatusKey, value);
   }
 
-  static const String healthUserKey = 'health_user';
+  static const String _lastHealthOsfTestDateKey = 'health_last_covid19_osf_test_date';
 
-  String get healthUser {
-    return _getStringWithName(healthUserKey);
-  }
-
-  set healthUser(String value) {
-    _setStringWithName(healthUserKey, value);
-  }
-
-  static const String lastHealthCovid19OsfTestDateKey = 'health_last_covid19_osf_test_date';
-
-  DateTime get lastHealthCovid19OsfTestDateUtc {
-    String dateString = _getStringWithName(lastHealthCovid19OsfTestDateKey);
+  DateTime get lastHealthOsfTestDateUtc {
+    String dateString = _getStringWithName(_lastHealthOsfTestDateKey);
     try { return (dateString != null) ? DateFormat('yyyy-MM-ddTHH:mm:ss').parse(dateString) : null; }
     catch (e) { print(e?.toString()); }
     return null;
   }
 
-  set lastHealthCovid19OsfTestDateUtc(DateTime value) {
+  set lastHealthOsfTestDateUtc(DateTime value) {
     String dateString = (value != null) ? DateFormat('yyyy-MM-ddTHH:mm:ss').format(value) : null;
-    _setStringWithName(lastHealthCovid19OsfTestDateKey, dateString);
+    _setStringWithName(_lastHealthOsfTestDateKey, dateString);
   }
 
-  static const String lastHealthStatusEvalKey  = '_health_last_status_eval';
+  static const String _healthUserKey = 'health_user';
 
-  int get lastHealthStatusEval {
-    return _getIntWithName(lastHealthStatusEvalKey, defaultValue: null);
+  String get healthUser {
+    return _getStringWithName(_healthUserKey);
   }
 
-  set lastHealthStatusEval(int value) {
-    _setIntWithName(lastHealthStatusEvalKey, value);
+  set healthUser(String value) {
+    _setStringWithName(_healthUserKey, value);
   }
 
+  static const String _healthUserStatusKey = 'health_user_status';
+
+  String get healthUserStatus {
+    return _getStringWithName(_healthUserStatusKey);
+  }
+
+  set healthUserStatus(String value) {
+    _setStringWithName(_healthUserStatusKey, value);
+  }
+
+  static const String _healthUserTestMonitorIntervalKey = 'health_user_test_monitor_interval';
+
+  int get healthUserTestMonitorInterval {
+    return _getIntWithName(_healthUserTestMonitorIntervalKey);
+  }
+
+  set healthUserTestMonitorInterval(int value) {
+    _setIntWithName(_healthUserTestMonitorIntervalKey, value);
+  }
+
+  static const String _healthUserAccountIdKey = 'health_user_account_id';
+
+  String get healthUserAccountId {
+    return _getStringWithName(_healthUserAccountIdKey);
+  }
+
+  set healthUserAccountId(String value) {
+    _setStringWithName(_healthUserAccountIdKey, value);
+  }
+
+  static const String _healthCountyKey = 'health_county';
+  
+  String get healthCounty {
+    return _getStringWithName(_healthCountyKey);
+  }
+
+  set healthCounty(String value) {
+    _setStringWithName(_healthCountyKey, value);
+  }
+
+  static const String _healthBuildingAccessRulesKey = 'health_building_access_rules';
+  
+  String get healthBuildingAccessRules {
+    return _getStringWithName(_healthBuildingAccessRulesKey);
+  }
+
+  set healthBuildingAccessRules(String value) {
+    _setStringWithName(_healthBuildingAccessRulesKey, value);
+  }
 
   /////////////
   // Exposure

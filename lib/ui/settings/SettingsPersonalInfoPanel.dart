@@ -21,7 +21,7 @@ import 'package:illinois/service/Auth.dart';
 import 'package:illinois/service/Exposure.dart';
 import 'package:illinois/service/Health.dart';
 import 'package:illinois/service/Localization.dart';
-import 'package:illinois/service/User.dart';
+import 'package:illinois/service/UserProfile.dart';
 import 'package:illinois/ui/widgets/HeaderBar.dart';
 import 'package:illinois/ui/widgets/RoundedButton.dart';
 import 'package:illinois/service/Styles.dart';
@@ -46,7 +46,7 @@ class _SettingsPersonalInfoPanelState extends State<SettingsPersonalInfoPanel> {
     await Health().deleteUser();
     await Exposure().deleteUser();
     await Auth().deleteUserPiiData();
-    await User().deleteUser();
+    await UserProfile().deleteProfile();
     Auth().logout();
   }
 
@@ -297,8 +297,9 @@ class _SettingsPersonalInfoPanelState extends State<SettingsPersonalInfoPanel> {
                 FlatButton(
                     onPressed: () {
                       Analytics.instance.logAlert(text: "Sign out", selection: "Yes");
-                      Navigator.pop(context);
                       Auth().logout();
+                      Navigator.pop(context);
+                      Navigator.pop(context);
                     },
                     child: Text(Localization().getStringEx("panel.profile_info.logout.button.yes", "Yes"))),
                 FlatButton(

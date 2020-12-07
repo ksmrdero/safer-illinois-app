@@ -16,14 +16,17 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:illinois/service/FlexUI.dart';
 import 'package:illinois/service/NotificationService.dart';
-import 'package:illinois/ui/health/onboarding/Covid19OnBoardingConsentPanel.dart';
-import 'package:illinois/ui/health/onboarding/Covid19OnBoardingFinalPanel.dart';
-import 'package:illinois/ui/health/onboarding/Covid19OnBoardingHowItWorks.dart';
-import 'package:illinois/ui/health/onboarding/Covid19OnBoardingIntroPanel.dart';
-import 'package:illinois/ui/health/onboarding/Covid19OnBoardingQrCodePanel.dart';
-import 'package:illinois/ui/health/onboarding/Covid19OnBoardingResidentInfoPanel.dart';
-import 'package:illinois/ui/health/onboarding/Covid19OnBoardingReviewScanPanel.dart';
+import 'package:illinois/service/Service.dart';
+import 'package:illinois/service/Storage.dart';
+import 'package:illinois/ui/onboarding/OnboardingHealthConsentPanel.dart';
+import 'package:illinois/ui/onboarding/OnboardingHealthFinalPanel.dart';
+import 'package:illinois/ui/onboarding/OnboardingHealthHowItWorksPanel.dart';
+import 'package:illinois/ui/onboarding/OnboardingHealthIntroPanel.dart';
+import 'package:illinois/ui/onboarding/OnboardingHealthQrCodePanel.dart';
+import 'package:illinois/ui/onboarding/OnboardingResidentInfoPanel.dart';
+import 'package:illinois/ui/onboarding/OnboardingReviewScanPanel.dart';
 import 'package:illinois/ui/onboarding/OnboardingAuthBluetoothPanel.dart';
 import 'package:illinois/ui/onboarding/OnboardingLoginPhoneConfirmPanel.dart';
 import 'package:illinois/ui/onboarding/OnboardingGetStartedPanel.dart';
@@ -31,37 +34,15 @@ import 'package:illinois/ui/onboarding/OnboardingAuthLocationPanel.dart';
 import 'package:illinois/ui/onboarding/OnboardingLoginNetIdPanel.dart';
 import 'package:illinois/ui/onboarding/OnboardingLoginPhonePanel.dart';
 import 'package:illinois/ui/onboarding/OnboardingAuthNotificationsPanel.dart';
+import 'package:illinois/ui/onboarding/OnboardingOrganizationsPanel.dart';
 import 'package:illinois/ui/onboarding/OnboardingRolesPanel.dart';
 import 'package:illinois/ui/onboarding/OnboardingLoginPhoneVerifyPanel.dart';
 
-class Onboarding {
+class Onboarding extends Service implements NotificationsListener{
 
   static const String notifyFinished  = "edu.illinois.rokwire.onboarding.finished";
 
-  static const List<String> _contentPanels = [
-    "OnboardingGetStartedPanel",
-    
-    "OnboardingAuthNotificationsPanel",
-    "OnboardingAuthLocationPanel",
-    "OnboardingAuthBluetoothPanel",
-    
-    "OnboardingRolesPanel",
-    
-    "OnboardingLoginNetIdPanel",
-
-    "OnboardingLoginPhonePanel",
-    "OnboardingLoginPhoneVerifyPanel",
-    "OnboardingLoginPhoneConfirmPanel",
-
-    "Covid19OnBoardingResidentInfoPanel",
-    "Covid19OnBoardingReviewScanPanel",
-
-    "Covid19OnBoardingIntroPanel",
-    "Covid19OnBoardingHowItWorks",
-    "Covid19OnBoardingConsentPanel",
-    "Covid19OnBoardingQrCodePanel",
-    "Covid19OnBoardingFinalPanel"
-  ];
+  List<dynamic> _contentCodes;
 
   // Singleton Factory
 
@@ -78,9 +59,43 @@ class Onboarding {
 
   // Implementation
 
+  @override
+  void createService() {
+    super.createService();
+    NotificationService().subscribe(this,[
+      FlexUI.notifyChanged,
+    ]);
+  }
+
+  @override
+  Future<void> initService() async{
+    await super.initService();
+    _loadContentCodes();
+  }
+
+  @override
+  void destroyService() {
+    super.destroyService();
+    NotificationService().unsubscribe(this);
+  }
+
+  Set<Service> get serviceDependsOn {
+    return Set<Service>.from([Storage(), FlexUI()]);
+  }
+
+  void onNotification(String name, dynamic param){
+    if(name == FlexUI.notifyChanged){
+      _loadContentCodes();
+    }
+  }
+
+  void _loadContentCodes(){
+    _contentCodes = FlexUI()['onboarding'];
+  }
+
   Widget get startPanel {
-    for (int index = 0; index < _contentPanels.length; index++) {
-      OnboardingPanel nextPanel = _createPanel(name: _contentPanels[index], context: {});
+    for (int index = 0; index < _contentCodes.length; index++) {
+      OnboardingPanel nextPanel = _createPanel(name: _contentCodes[index], context: {});
       if ((nextPanel != null) && nextPanel.onboardingCanDisplay) {
         return nextPanel as Widget;
       }
@@ -113,16 +128,16 @@ class Onboarding {
       nextPanelIndex = 0;
     }
     else {
-      String panelName = panel.runtimeType.toString();
-      int panelIndex = _contentPanels.indexOf(panelName);
+      String panelName = _getPanelCode(panel: panel);
+      int panelIndex = _contentCodes.indexOf(panelName);
       if (0 <= panelIndex) {
         nextPanelIndex = panelIndex + 1;
       }
     }
 
     if (nextPanelIndex != null) {
-      while (nextPanelIndex < _contentPanels.length) {
-        String nextPanelName = _contentPanels[nextPanelIndex];
+      while (nextPanelIndex < _contentCodes.length) {
+        String nextPanelName = _contentCodes[nextPanelIndex];
         OnboardingPanel nextPanel = _createPanel(name: nextPanelName, context: panel?.onboardingContext ?? {});
         if ((nextPanel != null) && nextPanel.onboardingCanDisplay && await nextPanel.onboardingCanDisplayAsync) {
           return nextPanel as Widget;
@@ -138,28 +153,78 @@ class Onboarding {
 
   OnboardingPanel _createPanel({String name, Map<String, dynamic> context}) {
     switch (name) {
-      case "OnboardingGetStartedPanel": return OnboardingGetStartedPanel(onboardingContext: context);
+      case "get_started": return OnboardingGetStartedPanel(onboardingContext: context);
+      case "organization": return OnboardingOrganizationsPanel(onboardingContext: context);
+      case "notifications_auth": return OnboardingAuthNotificationsPanel(onboardingContext: context);
+      case "location_auth": return OnboardingAuthLocationPanel(onboardingContext: context);
+      case "bluetooth_auth": return OnboardingAuthBluetoothPanel(onboardingContext: context);
+      case "roles": return OnboardingRolesPanel(onboardingContext: context);
+      case "login_netid": return OnboardingLoginNetIdPanel(onboardingContext: context);
+      case "login_phone": return OnboardingLoginPhonePanel(onboardingContext: context);
+      case "verify_phone": return OnboardingLoginPhoneVerifyPanel(onboardingContext: context);
+      case "confirm_phone": return OnboardingLoginPhoneConfirmPanel(onboardingContext: context);
+      case "resident_info": return OnboardingResidentInfoPanel(onboardingContext: context);
+      case "review_scan": return OnboardingReviewScanPanel(onboardingContext: context);
+      case "health_intro": return OnboardingHealthIntroPanel(onboardingContext: context);
+      case "health_how_it_works": return OnboardingHealthHowItWorksPanel(onboardingContext: context);
+      case "health_consent": return OnboardingHealthConsentPanel(onboardingContext: context);
+      case "health_qrcode": return OnboardingHealthQrCodePanel(onboardingContext: context);
+      case "health_final": return OnboardingHealthFinalPanel(onboardingContext: context);
+    }
+    return null;
+  }
 
-      case "OnboardingAuthNotificationsPanel": return OnboardingAuthNotificationsPanel(onboardingContext: context);
-      case "OnboardingAuthLocationPanel": return OnboardingAuthLocationPanel(onboardingContext: context);
-      case "OnboardingAuthBluetoothPanel": return OnboardingAuthBluetoothPanel(onboardingContext: context);
-
-      case "OnboardingRolesPanel": return OnboardingRolesPanel(onboardingContext: context);
-
-      case "OnboardingLoginNetIdPanel": return OnboardingLoginNetIdPanel(onboardingContext: context);
-
-      case "OnboardingLoginPhonePanel": return OnboardingLoginPhonePanel(onboardingContext: context);
-      case "OnboardingLoginPhoneVerifyPanel": return OnboardingLoginPhoneVerifyPanel(onboardingContext: context);
-      case "OnboardingLoginPhoneConfirmPanel": return OnboardingLoginPhoneConfirmPanel(onboardingContext: context);
-
-      case "Covid19OnBoardingResidentInfoPanel": return Covid19OnBoardingResidentInfoPanel(onboardingContext: context);
-      case "Covid19OnBoardingReviewScanPanel": return Covid19OnBoardingReviewScanPanel(onboardingContext: context);
-
-      case "Covid19OnBoardingIntroPanel": return Covid19OnBoardingIntroPanel(onboardingContext: context);
-      case "Covid19OnBoardingHowItWorks": return Covid19OnBoardingHowItWorks(onboardingContext: context);
-      case "Covid19OnBoardingConsentPanel": return Covid19OnBoardingConsentPanel(onboardingContext: context);
-      case "Covid19OnBoardingQrCodePanel": return Covid19OnBoardingQrCodePanel(onboardingContext: context);
-      case "Covid19OnBoardingFinalPanel": return Covid19OnBoardingFinalPanel(onboardingContext: context);
+  static String _getPanelCode({OnboardingPanel panel}) {
+    if (panel is OnboardingGetStartedPanel) {
+      return 'get_started';
+    }
+    if(panel is OnboardingOrganizationsPanel){
+      return 'organization';
+    }
+    else if (panel is OnboardingAuthNotificationsPanel) {
+      return 'notifications_auth';
+    }
+    else if (panel is OnboardingAuthLocationPanel) {
+      return 'location_auth';
+    }
+    else if (panel is OnboardingAuthBluetoothPanel) {
+      return 'bluetooth_auth';
+    }
+    else if (panel is OnboardingRolesPanel) {
+      return 'roles';
+    }
+    else if (panel is OnboardingLoginNetIdPanel) {
+      return 'login_netid';
+    }
+    else if (panel is OnboardingLoginPhonePanel) {
+      return 'login_phone';
+    }
+    else if (panel is OnboardingLoginPhoneVerifyPanel) {
+      return 'verify_phone';
+    }
+    else if (panel is OnboardingLoginPhoneConfirmPanel) {
+      return 'confirm_phone';
+    }
+    else if (panel is OnboardingResidentInfoPanel) {
+      return 'resident_info';
+    }
+    else if (panel is OnboardingReviewScanPanel) {
+      return 'review_scan';
+    }
+    else if (panel is OnboardingHealthIntroPanel) {
+      return 'health_intro';
+    }
+    else if (panel is OnboardingHealthHowItWorksPanel) {
+      return 'health_how_it_works';
+    }
+    else if (panel is OnboardingHealthConsentPanel) {
+      return 'health_consent';
+    }
+    else if (panel is OnboardingHealthQrCodePanel) {
+      return 'health_qrcode';
+    }
+    else if (panel is OnboardingHealthFinalPanel) {
+      return 'health_final';
     }
     return null;
   }

@@ -21,7 +21,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:illinois/service/AppNavigation.dart';
 import 'package:illinois/service/NativeCommunicator.dart';
-import 'package:illinois/service/User.dart';
+import 'package:illinois/service/Organizations.dart';
+import 'package:illinois/service/UserProfile.dart';
 import 'package:illinois/service/Config.dart';
 import 'package:illinois/service/NotificationService.dart';
 import 'package:illinois/service/Service.dart';
@@ -126,8 +127,9 @@ class _AppState extends State<App> implements NotificationsListener {
       Onboarding.notifyFinished,
       Config.notifyUpgradeAvailable,
       Config.notifyUpgradeRequired,
-      Config.notifyEnvironmentChanged,
-      User.notifyUserDeleted,
+      Organizations.notifyOrganizationChanged,
+      Organizations.notifyEnvironmentChanged,
+      UserProfile.notifyProfileDeleted,
     ]);
 
     AppLivecycle.instance.ensureBinding();
@@ -219,10 +221,13 @@ class _AppState extends State<App> implements NotificationsListener {
         _upgradeAvailableVersion = param;
       });
     }
-    else if (name == Config.notifyEnvironmentChanged) {
+    else if (name == Organizations.notifyOrganizationChanged) {
       _resetUI();
     }
-    else if (name == User.notifyUserDeleted) {
+    else if (name == Organizations.notifyEnvironmentChanged) {
+      _resetUI();
+    }
+    else if (name == UserProfile.notifyProfileDeleted) {
       _resetUI();
     }
   }

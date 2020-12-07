@@ -152,7 +152,6 @@ class Exposure with Service implements NotificationsListener {
       Config.notifyConfigChanged,
       AppLivecycle.notifyStateChanged,
       Health.notifyUserUpdated,
-      Health.notifyUserPrivateKeyUpdated,
       Auth.notifyLoggedOut,
     ]);
   }
@@ -220,7 +219,7 @@ class Exposure with Service implements NotificationsListener {
         _updateExposureMinDuration();
         checkReport();
       }
-      else if (name == Health.notifyUserUpdated || name == Health.notifyUserPrivateKeyUpdated) {
+      else if (name == Health.notifyUserUpdated) {
         _updatePlugin();
         _updateExposuresMonitor();
         checkReport();        
@@ -658,14 +657,14 @@ class Exposure with Service implements NotificationsListener {
   // Networking
 
   Future<bool> reportTEKs(List<ExposureTEK> teks) async {
-    String url = "${Config().healthUrl}/covid19/trace/report";
-    String post = AppJson.encode(ExposureTEK.listToJson(teks));
-    Response response = await Network().post(url, body: post, auth: NetworkAuth.App);
+    String url = (Config().healthUrl != null) ? "${Config().healthUrl}/covid19/trace/report" : null;
+    String post = (url != null) ? AppJson.encode(ExposureTEK.listToJson(teks)) : null;
+    Response response = (url != null) ? await Network().post(url, body: post, auth: NetworkAuth.App) : null;
     return (response?.statusCode == 200);
   }
 
   Future<List<ExposureTEK>> loadReportedTEKs({int timestamp, int dateAdded}) async {
-    String url = "${Config().healthUrl}/covid19/trace/exposures";
+    String url = (Config().healthUrl != null) ? "${Config().healthUrl}/covid19/trace/exposures" : null;
     
     String params = '';
     if (timestamp != null) {
@@ -684,7 +683,7 @@ class Exposure with Service implements NotificationsListener {
       url += '?$params';
     }
 
-    Response response = await Network().get(url, auth: NetworkAuth.App);
+    Response response = (url != null) ? await Network().get(url, auth: NetworkAuth.App) : null;
     String responseString = (response?.statusCode == 200) ? response.body : null;
     List<dynamic> responseJson = (responseString != null) ? AppJson.decodeList(responseString) : null;
     return (responseJson != null) ? ExposureTEK.listFromJson(responseJson) : null;
@@ -713,14 +712,14 @@ class Exposure with Service implements NotificationsListener {
       if (_reportTargetTimestamp == null) {
         return 0;
       }
-      else if ((Health().lastCovid19Status != kCovid19HealthStatusRed) && (_lastReportTimestamp != null) && (_reportTargetTimestamp < _lastReportTimestamp)) {
+      else if ((Health().status?.blob?.status != kHealthStatusRed) && (_lastReportTimestamp != null) && (_reportTargetTimestamp < _lastReportTimestamp)) {
         Storage().exposureReportTargetTimestamp = _reportTargetTimestamp = null;
         await _expireTEK(); 
         return 0;
       }
     }
     else {
-      if (Health().lastCovid19Status != kCovid19HealthStatusRed) {
+      if (Health().status?.blob?.status != kHealthStatusRed) {
         return 0;
       }
     }
@@ -732,15 +731,15 @@ class Exposure with Service implements NotificationsListener {
     Log.d('Exposure: Checking local TEKs to report...');
     _checkingReport = true;
 
-    List<Covid19History> histories = await Health().loadCovid19History();
-    HealthRulesSet rules = await Health().loadRules2();
+    List<HealthHistory> history = Health().history;
+    HealthRulesSet rules = Health().rules;
     Set<String> negativeTestCategories = _negativeTestCategories;
 
     int minTimestamp, maxTimestamp, currentTimestamp = _currentTimestamp;
     if (activeInterval != null) {
 
       minTimestamp = getThresholdTimestamp(origin: _reportTargetTimestamp); // two weeks before the target;
-      int recentTestTimestamp = _findMostRecentNegativeTestTimestamp(histories: histories, rules: rules, negativeTestCategories: negativeTestCategories, minTimestamp: minTimestamp, maxTimestamp: _reportTargetTimestamp);
+      int recentTestTimestamp = _findMostRecentNegativeTestTimestamp(history: history, rules: rules, negativeTestCategories: negativeTestCategories, minTimestamp: minTimestamp, maxTimestamp: _reportTargetTimestamp);
       if ((recentTestTimestamp != null) && (minTimestamp < recentTestTimestamp)) {
         minTimestamp = recentTestTimestamp; // not earlier than the last negative test result
       }
@@ -749,7 +748,7 @@ class Exposure with Service implements NotificationsListener {
       }
       
       maxTimestamp = _reportTargetTimestamp + activeInterval;
-      int earlyTestTimestamp = _findEarlierNegativeTestTimestamp(histories: histories, rules: rules, negativeTestCategories: negativeTestCategories, minTimestamp: _reportTargetTimestamp, maxTimestamp: maxTimestamp);
+      int earlyTestTimestamp = _findEarlierNegativeTestTimestamp(history: history, rules: rules, negativeTestCategories: negativeTestCategories, minTimestamp: _reportTargetTimestamp, maxTimestamp: maxTimestamp);
       if ((earlyTestTimestamp != null) && (earlyTestTimestamp < maxTimestamp)) {
         maxTimestamp = earlyTestTimestamp;
       }
@@ -759,7 +758,7 @@ class Exposure with Service implements NotificationsListener {
     }
     else {
       minTimestamp = getThresholdTimestamp(origin: currentTimestamp);
-      int recentTestTimestamp = _findMostRecentNegativeTestTimestamp(histories: histories, rules: rules, negativeTestCategories: negativeTestCategories, minTimestamp: minTimestamp, maxTimestamp: currentTimestamp);
+      int recentTestTimestamp = _findMostRecentNegativeTestTimestamp(history: history, rules: rules, negativeTestCategories: negativeTestCategories, minTimestamp: minTimestamp, maxTimestamp: currentTimestamp);
       if ((recentTestTimestamp != null) && (minTimestamp < recentTestTimestamp)) {
         minTimestamp = recentTestTimestamp; // not earlier than the last negative test result
       }
@@ -802,12 +801,12 @@ class Exposure with Service implements NotificationsListener {
     return result;
   }
 
-  int _findMostRecentNegativeTestTimestamp({List<Covid19History> histories, HealthRulesSet rules, Set<String> negativeTestCategories, int minTimestamp, int maxTimestamp}) {
-    if ((histories != null) && (rules != null) && (negativeTestCategories != null)) {
+  int _findMostRecentNegativeTestTimestamp({List<HealthHistory> history, HealthRulesSet rules, Set<String> negativeTestCategories, int minTimestamp, int maxTimestamp}) {
+    if ((history != null) && (rules != null) && (negativeTestCategories != null)) {
       // start from newest
-      for (int index = 0; index < histories.length; index++) {
-        Covid19History history = histories[index];
-        int historyTimestamp = (history.dateUtc != null) ? history.dateUtc.millisecondsSinceEpoch : null;
+      for (int index = 0; index < history.length; index++) {
+        HealthHistory historyEntry = history[index];
+        int historyTimestamp = (historyEntry.dateUtc != null) ? historyEntry.dateUtc.millisecondsSinceEpoch : null;
         if (historyTimestamp != null) {
           if ((maxTimestamp != null) && (maxTimestamp < historyTimestamp)) {
             continue;
@@ -815,7 +814,7 @@ class Exposure with Service implements NotificationsListener {
           if ((minTimestamp != null) && (historyTimestamp < minTimestamp)) {
             break;
           }
-          HealthTestRuleResult testRuleResult = history.isTestVerified ? rules.tests.matchRuleResult(blob: history?.blob) : null;
+          HealthTestRuleResult testRuleResult = historyEntry.isTestVerified ? rules.tests.matchRuleResult(blob: historyEntry?.blob) : null;
           if ((testRuleResult?.category != null) && negativeTestCategories.contains(testRuleResult.category)) {
             return historyTimestamp;
           }
@@ -825,12 +824,12 @@ class Exposure with Service implements NotificationsListener {
     return null;
   }
 
-  int _findEarlierNegativeTestTimestamp({List<Covid19History> histories, HealthRulesSet rules, Set<String> negativeTestCategories, int minTimestamp, int maxTimestamp}) {
-    if ((histories != null) && (rules != null) && (negativeTestCategories != null)) {
+  int _findEarlierNegativeTestTimestamp({List<HealthHistory> history, HealthRulesSet rules, Set<String> negativeTestCategories, int minTimestamp, int maxTimestamp}) {
+    if ((history != null) && (rules != null) && (negativeTestCategories != null)) {
       // start from oldest
-      for (int index = histories.length - 1; 0 <= index; index--) {
-        Covid19History history = histories[index];
-        int historyTimestamp = (history.dateUtc != null) ? history.dateUtc.millisecondsSinceEpoch : null;
+      for (int index = history.length - 1; 0 <= index; index--) {
+        HealthHistory historyEntry = history[index];
+        int historyTimestamp = (historyEntry.dateUtc != null) ? historyEntry.dateUtc.millisecondsSinceEpoch : null;
         if (historyTimestamp != null) {
           if ((minTimestamp != null) && (historyTimestamp < minTimestamp)) {
             continue;
@@ -838,7 +837,7 @@ class Exposure with Service implements NotificationsListener {
           if ((maxTimestamp != null) && (maxTimestamp < historyTimestamp)) {
             break;
           }
-          HealthTestRuleResult testRuleResult = history.isTestVerified ? rules.tests.matchRuleResult(blob: history?.blob) : null;
+          HealthTestRuleResult testRuleResult = historyEntry.isTestVerified ? rules.tests.matchRuleResult(blob: historyEntry?.blob) : null;
           if ((testRuleResult?.category != null) && negativeTestCategories.contains(testRuleResult.category)) {
             return historyTimestamp;
           }
@@ -936,18 +935,20 @@ class Exposure with Service implements NotificationsListener {
       Log.d('Processing ${reportedTEKs.length} TEKs newer than $thresholdTimestamp reported.');
     }
 
-    List<Covid19History> histories = await Health().loadCovid19History();
-
     Analytics().logHealth(action: Analytics.LogHealthCheckExposuresAction);
 
-    int detected = 0;
-    List<Covid19History> results;
+    List<HealthHistory> history = Health().history;
+    HealthStatus lastHealthStatus = Health().status;
+    HealthHistory lastTest = HealthHistory.mostRecentTest(history);
+    DateTime lastTestDateUtc = lastTest?.dateUtc;
+    int scoringDayThreshold = _evalScoringDayThreshold(lastTestDateUtc: lastTestDateUtc);
 
+    int detected = 0;
+    List<HealthHistory> results;
     
     // Map<int, int> scoringExposures = new Map<int, int>;
     // key = time interval, value = number of rpis in that time interval
     Map<int, Set<String>> scoringExposures = new Map<int, Set<String>>(); 
-    int scoringDayThreshold = _evalScoringDayThreshold(histories: histories);
 
     for (ExposureTEK tek in reportedTEKs) {
       Map<String, int> rpisMap = await _loadTekRPIs(tek);
@@ -991,33 +992,31 @@ class Exposure with Service implements NotificationsListener {
         }
 
         if ((exposureDateUtc != null) && (_exposureMinDuration <= exposureDuration)) {
-          Covid19History result;  
+          HealthHistory result;  
 
-          hasPassedExposureScoring = true;
-
-          Covid19History history = Covid19History.traceInList(histories, tek: tek.tek);
-          if (history != null) {
-            if ((history.dateUtc != null) && history.dateUtc.isBefore(exposureDateUtc)) {
-              exposureDateUtc = history.dateUtc;
+          HealthHistory historyEntry = HealthHistory.traceInList(history, tek: tek.tek);
+          if (historyEntry != null) {
+            if ((historyEntry.dateUtc != null) && historyEntry.dateUtc.isBefore(exposureDateUtc)) {
+              exposureDateUtc = historyEntry.dateUtc;
             }
-            if (history.blob?.traceDuration != null) {
-              exposureDuration += history.blob?.traceDuration;
+            if (historyEntry.blob?.traceDuration != null) {
+              exposureDuration += historyEntry.blob?.traceDuration;
             }
 
-            result = await Health().updateCovid19History(
-              id: history.id,
+            result = await Health().updateHistory(
+              id: historyEntry.id,
               dateUtc: exposureDateUtc,
-              type: Covid19HistoryType.contactTrace,
-              blob: Covid19HistoryBlob(
+              type: HealthHistoryType.contactTrace,
+              blob: HealthHistoryBlob(
                 traceDuration: exposureDuration,
                 traceTEK: tek.tek
               ));
           }
           else {
-            result = await Health().addCovid19History(
+            result = await Health().addHistory(
               dateUtc: exposureDateUtc,
-              type: Covid19HistoryType.contactTrace,
-              blob: Covid19HistoryBlob(
+              type: HealthHistoryType.contactTrace,
+              blob: HealthHistoryBlob(
                 traceDuration: exposureDuration,
                 traceTEK: tek.tek
               ));
@@ -1026,7 +1025,7 @@ class Exposure with Service implements NotificationsListener {
           if (result != null) {
             _markLocalExposureProcessed(detectedExposures);
             if (results == null) {
-              results = List<Covid19History>();
+              results = List<HealthHistory>();
             }
             results.add(result);
           }
@@ -1046,20 +1045,11 @@ class Exposure with Service implements NotificationsListener {
     }
 
     if (results != null) {
-      NotificationService().notify(Health.notifyHistoryUpdated, null);
-
-      String lastHealthStatus = Health().lastCovid19Status;
-      String newHealthStatus = lastHealthStatus;
-      Covid19Status status = await Health().updateStatusFromHistory();
-      if (covid19HealthStatusIsValid(status?.blob?.healthStatus)) {
-        newHealthStatus = status?.blob?.healthStatus;
-      }
-
-      for (Covid19History result in results) {
+      for (HealthHistory result in results) {
         Analytics().logHealth(
           action: Analytics.LogHealthContactTraceProcessedAction,
-          status: newHealthStatus,
-          prevStatus: lastHealthStatus,
+          status: Health().status?.blob?.status,
+          prevStatus: lastHealthStatus?.blob?.status,
           attributes: {
             Analytics.LogHealthDurationName: result.blob.traceDuration,
             Analytics.LogHealthExposureTimestampName: result.dateUtc?.toIso8601String(),
@@ -1124,10 +1114,8 @@ class Exposure with Service implements NotificationsListener {
     return exposureResult;
   }
 
-  int _evalScoringDayThreshold({List<Covid19History> histories}) {
+  int _evalScoringDayThreshold({DateTime lastTestDateUtc}) {
     int scoringDateTimestamp;
-    Covid19History lastTest = Covid19History.mostRecentTest(histories);
-    DateTime lastTestDateUtc = lastTest?.dateUtc;
     if (lastTestDateUtc != null) {
       int lastTestTimestamp = lastTestDateUtc.millisecondsSinceEpoch;
       scoringDateTimestamp = lastTestTimestamp - _millisecondsInDay; // a day before last test timestamp
@@ -1138,6 +1126,69 @@ class Exposure with Service implements NotificationsListener {
       scoringDateTimestamp = midnightTimestamp - (5 * _millisecondsInDay); // five days ago midnight timestamp
     }
     return scoringDateTimestamp ~/ _rpiRefreshInterval;
+  }
+
+  Future<int> evalTestResultExposureScoring({DateTime previousTestDateUtc}) async {
+    
+    if (!_serviceEnabled) {
+      return null;
+    }
+
+    int previousTestTimestamp = previousTestDateUtc?.millisecondsSinceEpoch;
+
+    List<Future<dynamic>> futures = <Future>[
+        loadLocalExposures(timestamp: previousTestTimestamp),
+        loadReportedTEKs(timestamp: previousTestTimestamp),
+    ];
+    List<dynamic> results = await Future.wait(futures);
+
+    List<ExposureRecord> exposures = ((results != null) && (0 < results.length)) ? results[0] : null;
+    List<ExposureTEK> reportedTEKs = ((results != null) && (1 < results.length)) ? results[1] : null;
+    if ((exposures == null) || (reportedTEKs == null)) {
+      return null;
+    }
+    else if (exposures.isEmpty || reportedTEKs.isEmpty) {
+      // no ContactWithPositive or PassedExposureScoring
+      return _buildTestResultExposureScoring(hasExposureNotificationsEnabled: Health().userExposureNotification);
+    }
+
+    bool hasContactWithPositive, hasPassedExposureScoring;
+    for (ExposureTEK tek in reportedTEKs) {
+      Map<String, int> rpisMap = await _loadTekRPIs(tek);
+      if (rpisMap != null) {
+        int exposureDuration = 0;
+        Set<String> rpisSet = Set.from(rpisMap.keys);
+        for (ExposureRecord exposure in exposures) {
+          if (rpisSet.contains(exposure.rpi) &&
+              ((exposure.timestamp + _rpiCheckExposureBuffer) >= rpisMap[exposure.rpi]) &&
+              ((exposure.timestamp - _rpiCheckExposureBuffer - _rpiRefreshInterval) < rpisMap[exposure.rpi])
+          ) {
+            exposureDuration += exposure.duration;
+            hasContactWithPositive = true;
+          }
+        }
+        if (_exposureMinDuration <= exposureDuration) {
+          hasPassedExposureScoring = true;
+        }
+      }
+    }
+    
+    return _buildTestResultExposureScoring(
+      hasContactWithPositive: hasContactWithPositive,
+      hasPassedExposureScoring: hasPassedExposureScoring,
+      hasExposureNotificationsEnabled: Health().userExposureNotification);
+  }
+
+  static int _buildTestResultExposureScoring({bool hasContactWithPositive, bool hasPassedExposureScoring, bool hasExposureNotificationsEnabled}) {
+    // converting flags --> int to upload
+    // bit 0 --> has contact with positive
+    // bit 1 --> has passed exposure scoring
+    // bit 2 --> has exposure notifications enabled
+
+    return
+      (((hasContactWithPositive == true) ? 1 : 0) << 0) |
+      (((hasPassedExposureScoring == true) ? 1 : 0) << 1) |
+      (((hasExposureNotificationsEnabled == true) ? 1 : 0) << 2);
   }
 
   // Logging
@@ -1154,30 +1205,33 @@ class Exposure with Service implements NotificationsListener {
   }
 
   Future<bool> _postSessionData({int sessionId, String deviceId, bool isAndroid}) async {
-    List<Map<String, dynamic>> recordRssi;
-    String rssiQuery = "SELECT * FROM $_databaseRssiTable WHERE $_databaseRssiSessionIdField = $sessionId";
-    try { recordRssi = (_database != null) ? await _database.rawQuery(rssiQuery) : null; } catch (e) { print(e?.toString()); }
+    if (AppString.isStringNotEmpty(Config().exposureLogUrl)) {
+      List<Map<String, dynamic>> recordRssi;
+      String rssiQuery = "SELECT * FROM $_databaseRssiTable WHERE $_databaseRssiSessionIdField = $sessionId";
+      try { recordRssi = (_database != null) ? await _database.rawQuery(rssiQuery) : null; } catch (e) { print(e?.toString()); }
 
-    List<Map<String, dynamic>> recordContact;
-    String contactQuery = "SELECT * FROM $_databaseContactTable WHERE $_databaseContactSessionIdField = $sessionId";
-    try { recordContact = (_database != null) ? await _database.rawQuery(contactQuery) : null; } catch (e) { print(e?.toString()); }
+      List<Map<String, dynamic>> recordContact;
+      String contactQuery = "SELECT * FROM $_databaseContactTable WHERE $_databaseContactSessionIdField = $sessionId";
+      try { recordContact = (_database != null) ? await _database.rawQuery(contactQuery) : null; } catch (e) { print(e?.toString()); }
 
-    List<Map<String, dynamic>> recordRpi;
-    String rpiQuery = "SELECT * FROM $_databaseRpiTable WHERE $_databaseRpiSessionIdField = $sessionId";
-    try { recordRpi = (_database != null) ? await _database.rawQuery(rpiQuery) : null; } catch (e) { print(e?.toString()); }
+      List<Map<String, dynamic>> recordRpi;
+      String rpiQuery = "SELECT * FROM $_databaseRpiTable WHERE $_databaseRpiSessionIdField = $sessionId";
+      try { recordRpi = (_database != null) ? await _database.rawQuery(rpiQuery) : null; } catch (e) { print(e?.toString()); }
 
-    Map<String, dynamic> upload = {
-      "deviceID": deviceId,
-      "isAndroid": isAndroid,
-      "contact": recordContact,
-      "rpi": recordRpi,
-      "rssi": recordRssi
-    };
-    Response response = await Network().post(
-        'http://ec2-18-191-37-235.us-east-2.compute.amazonaws.com:8003/PostSessionData',
-        body: AppJson.encode(upload),
-        auth: NetworkAuth.App);
-    return response?.statusCode == 200;
+      Map<String, dynamic> upload = {
+        "deviceID": deviceId,
+        "isAndroid": isAndroid,
+        "contact": recordContact,
+        "rpi": recordRpi,
+        "rssi": recordRssi
+      };
+      Response response = await Network().post(
+          Config().exposureLogUrl,
+          body: AppJson.encode(upload),
+          auth: NetworkAuth.App);
+      return response?.statusCode == 200;
+    }
+    return null;
   }
 
 
